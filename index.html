@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>50 Startups 多元線性迴歸分析與利潤預測系統</title>
+    <meta name="description" content="基於 50 Startups 資料集之 CRISP-DM 多元線性迴歸（MLR）特徵選取、統計假設檢驗與互動式利潤預測 Web 系統。">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Glow Blobs -->
+    <div class="glow-bg glow-1"></div>
+    <div class="glow-bg glow-2"></div>
+    <div class="glow-bg glow-3"></div>
+
+    <!-- Navigation Header -->
+    <header class="navbar" id="main-nav">
+        <div class="nav-container">
+            <div class="brand">
+                <div class="brand-logo">50</div>
+                <div class="brand-text">
+                    <span class="brand-title">Startups MLR</span>
+                    <span class="brand-badge">CRISP-DM Studio</span>
+                </div>
+            </div>
+            <nav class="nav-links">
+                <a href="#kpi-section" class="nav-link">指標總覽</a>
+                <a href="#feature-selection" class="nav-link">特徵選取圖表</a>
+                <a href="#calculator" class="nav-link">利潤預測模擬</a>
+                <a href="#dataset-viewer" class="nav-link">資料集探索</a>
+                <a href="#assumptions" class="nav-link">迴歸假設檢定</a>
+                <a href="https://github.com/wupinlai/50_Startups-Dataset" target="_blank" class="github-btn" id="github-repo-link">
+                    <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                    GitHub 倉庫
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-tags">
+                <span class="hero-tag tag-primary">CRISP-DM 最佳化實踐</span>
+                <span class="hero-tag tag-secondary">Scikit-Learn & Statsmodels</span>
+                <span class="hero-tag tag-accent">GitHub Pages Ready</span>
+            </div>
+            <h1 class="hero-title">50 Startups 多元線性迴歸與利潤決策系統</h1>
+            <p class="hero-desc">
+                運用統計學與機器學習探討新創企業研發（R&D）、行銷（Marketing）、營運管理（Administration）與所在地（State）對淨利潤（Profit）之邊際影響，實現精準投資決策預測。
+            </p>
+        </section>
+
+        <!-- KPI Cards Section -->
+        <section class="kpi-section" id="kpi-section">
+            <div class="kpi-grid">
+                <div class="kpi-card highlight-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">最佳模型解譯力</span>
+                        <span class="kpi-icon">🎯</span>
+                    </div>
+                    <div class="kpi-value" id="kpi-r2">94.74%</div>
+                    <div class="kpi-sub">
+                        <span class="badge-success">R² = 0.9474</span> 雙特徵最佳模型（R&D + 行銷）
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">最低測試集均方根誤差</span>
+                        <span class="kpi-icon">📉</span>
+                    </div>
+                    <div class="kpi-value" id="kpi-rmse">$8,198.80</div>
+                    <div class="kpi-sub">
+                        <span class="badge-neutral">RMSE 最佳點</span> 較全特徵模型誤差縮減 $939+
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">利潤核心驅動因子</span>
+                        <span class="kpi-icon">🚀</span>
+                    </div>
+                    <div class="kpi-value">R&D 研發支出</div>
+                    <div class="kpi-sub">
+                        <span class="badge-primary">p < 0.001</span> 每投入 $1 研發創造 ~$0.81 利潤
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">樣本與特徵維度</span>
+                        <span class="kpi-icon">📊</span>
+                    </div>
+                    <div class="kpi-value">50 家 / 3 州</div>
+                    <div class="kpi-sub">
+                        <span class="badge-secondary">紐約・加州・佛州</span> 80/20 嚴格交叉保留檢定
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Selection & Charts Section (Replicating User's Image) -->
+        <section class="section-container" id="feature-selection">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">前向特徵選取分析（Forward Feature Selection）</h2>
+                    <p class="section-subtitle">探索不同特徵組合對模型泛化能力之影響，視覺化呈現 RMSE 最低點與 R² 變化軌跡</p>
+                </div>
+                <div class="feature-selector-tabs" id="feature-tabs">
+                    <button class="tab-btn" data-features="1">1 個特徵</button>
+                    <button class="tab-btn active" data-features="2">2 個特徵 ⭐最佳</button>
+                    <button class="tab-btn" data-features="3">3 個特徵</button>
+                    <button class="tab-btn" data-features="4">4 個特徵</button>
+                    <button class="tab-btn" data-features="5">5 個特徵 (全模型)</button>
+                </div>
+            </div>
+
+            <!-- Dual Line Charts (Matches User Screenshot) -->
+            <div class="dual-chart-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">RMSE by Number of Features</h3>
+                        <span class="chart-badge">越低越好</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="rmseChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">R-squared by Number of Features</h3>
+                        <span class="chart-badge">越高越好</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="r2Chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Replicated Styled Table -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h3 class="table-title">特徵組合評估對照表</h3>
+                    <span class="table-note">（點擊任一行可切換下方預測模型）</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="modern-table" id="feature-selection-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 14%;">特徵數量 (Number of Features)</th>
+                                <th style="width: 54%;">選取特徵組合 (Selected Features)</th>
+                                <th style="width: 16%; text-align: right;">RMSE</th>
+                                <th style="width: 16%; text-align: right;">R-squared</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feature-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Profit Calculator Section -->
+        <section class="section-container" id="calculator">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">即時利潤預測與投資模擬器 (Inference Calculator)</h2>
+                    <p class="section-subtitle">輸入新創公司各項預算配置，即時預估預期獲利與投資報酬率（ROI）</p>
+                </div>
+                <div class="model-switch-container">
+                    <label class="switch-label">使用模型：</label>
+                    <select id="model-select" class="modern-select">
+                        <option value="optimal2" selected>⭐ 最佳雙特徵模型（R&D + Marketing, RMSE: $8,198）</option>
+                        <option value="full5">全特徵五變數模型（含州別虛擬變數與行政支出）</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="calculator-grid">
+                <!-- Controls Form -->
+                <div class="calc-card controls-card">
+                    <div class="calc-header">
+                        <h3>投資與營運參數調整</h3>
+                        <button class="preset-btn" id="load-sample-btn">載入範例企業</button>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="input-label-row">
+                            <label for="rd-input">🔬 研發支出 (R&D Spend)</label>
+                            <span class="val-display" id="rd-val">$160,000</span>
+                        </div>
+                        <input type="range" id="rd-slider" min="0" max="250000" step="1000" value="160000" class="modern-range">
+                        <div class="num-input-wrap">
+                            <span class="currency-symbol">$</span>
+                            <input type="number" id="rd-input" min="0" max="1000000" step="500" value="160000" class="modern-input">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="input-label-row">
+                            <label for="mktg-input">📢 行銷推廣支出 (Marketing Spend)</label>
+                            <span class="val-display" id="mktg-val">$300,000</span>
+                        </div>
+                        <input type="range" id="mktg-slider" min="0" max="500000" step="2000" value="300000" class="modern-range">
+                        <div class="num-input-wrap">
+                            <span class="currency-symbol">$</span>
+                            <input type="number" id="mktg-input" min="0" max="1000000" step="500" value="300000" class="modern-input">
+                        </div>
+                    </div>
+
+                    <div class="input-group" id="admin-group">
+                        <div class="input-label-row">
+                            <label for="admin-input">🏢 營運管理支出 (Administration)</label>
+                            <span class="val-display" id="admin-val">$130,000</span>
+                        </div>
+                        <input type="range" id="admin-slider" min="0" max="250000" step="1000" value="130000" class="modern-range">
+                        <div class="num-input-wrap">
+                            <span class="currency-symbol">$</span>
+                            <input type="number" id="admin-input" min="0" max="1000000" step="500" value="130000" class="modern-input">
+                        </div>
+                        <span class="field-hint" id="admin-hint">註：在統計檢定中 p = 0.265，未達統計顯著性。</span>
+                    </div>
+
+                    <div class="input-group" id="state-group">
+                        <div class="input-label-row">
+                            <label for="state-select">📍 註冊所在地 (State)</label>
+                        </div>
+                        <select id="state-select" class="modern-select full-width">
+                            <option value="New York" selected>New York (紐約州)</option>
+                            <option value="California">California (加州 - 基準組)</option>
+                            <option value="Florida">Florida (佛羅里達州)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Prediction Results Display -->
+                <div class="calc-card result-card">
+                    <div class="result-header">
+                        <h3>預估利潤分析報告</h3>
+                        <span class="confidence-badge">95% 信賴區間</span>
+                    </div>
+
+                    <div class="profit-display">
+                        <span class="profit-caption">預測淨利潤 (Predicted Profit)</span>
+                        <div class="profit-amount" id="profit-output">$182,950.05</div>
+                        <div class="profit-ci" id="profit-ci">信賴區間: $165,190 ~ $200,710</div>
+                    </div>
+
+                    <div class="metrics-subgrid">
+                        <div class="metric-box">
+                            <span class="metric-box-title">總投入成本</span>
+                            <span class="metric-box-val" id="total-cost">$590,000</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-box-title">預估利潤率</span>
+                            <span class="metric-box-val" id="profit-margin">31.0%</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-box-title">研發貢獻度</span>
+                            <span class="metric-box-val" id="rd-contribution">68.8%</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-box-title">模型選取</span>
+                            <span class="metric-box-val" id="active-model-name">雙特徵最佳</span>
+                        </div>
+                    </div>
+
+                    <div class="formula-box">
+                        <div class="formula-title">當前模型計算方程式：</div>
+                        <div class="formula-code" id="formula-display">
+                            Profit = 46,346.34 + 0.7886 × (R&D) + 0.0326 × (Marketing)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dataset Explorer Section -->
+        <section class="section-container" id="dataset-viewer">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">50 家新創公司完整資料庫 (50 Startups Dataset)</h2>
+                    <p class="section-subtitle">支援依州別即時篩選、欄位排序與關鍵字搜尋</p>
+                </div>
+                <div class="dataset-controls">
+                    <input type="text" id="dataset-search" placeholder="🔍 搜尋數值或州別..." class="search-input">
+                    <select id="state-filter" class="modern-select">
+                        <option value="all">全部州別 (50 家)</option>
+                        <option value="New York">New York (17 家)</option>
+                        <option value="California">California (17 家)</option>
+                        <option value="Florida">Florida (16 家)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <div class="table-responsive max-height-table">
+                    <table class="modern-table" id="startups-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 10%;">編號</th>
+                                <th style="width: 22%;">R&D Spend (研發支出)</th>
+                                <th style="width: 22%;">Administration (行政支出)</th>
+                                <th style="width: 22%;">Marketing Spend (行銷支出)</th>
+                                <th style="width: 12%;">State (州別)</th>
+                                <th style="width: 12%; text-align: right;">Profit (利潤)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="startups-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer-status" id="table-status">共顯示 50 筆記錄</div>
+            </div>
+        </section>
+
+        <!-- Regression Assumptions Section -->
+        <section class="section-container" id="assumptions">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">普通最小平方法（OLS）五大迴歸假設嚴謹檢驗</h2>
+                    <p class="section-subtitle">確保多元線性迴歸模型符合統計不偏性（Gauss-Markov 定理）</p>
+                </div>
+            </div>
+
+            <div class="assumptions-grid">
+                <div class="assumption-card passed">
+                    <div class="assump-badge">通過檢定 ✓</div>
+                    <h3 class="assump-title">1. 線性關係（Linearity）</h3>
+                    <p class="assump-desc">殘差對擬合值（Residuals vs. Fitted）呈現零均值水平隨機均勻分佈，無明顯二維拋物線或彎曲非線性特徵。</p>
+                </div>
+
+                <div class="assumption-card passed">
+                    <div class="assump-badge">通過檢定 ✓</div>
+                    <h3 class="assump-title">2. 殘差常態性（Normality）</h3>
+                    <p class="assump-desc">Normal Q-Q Plot 顯示各點緊貼理論分佈對角線；Jarque-Bera 與 Omnibus 統計檢定量落在可接受之理論臨界範圍。</p>
+                </div>
+
+                <div class="assumption-card passed">
+                    <div class="assump-badge">通過檢定 ✓</div>
+                    <h3 class="assump-title">3. 殘差同質變異（Homoscedasticity）</h3>
+                    <p class="assump-desc">隨著預測利潤提高，殘差變異數保持一致擴散度，未出現漏斗狀或錐型異質變異（Heteroscedasticity）現象。</p>
+                </div>
+
+                <div class="assumption-card passed">
+                    <div class="assump-badge">通過檢定 ✓</div>
+                    <h3 class="assump-title">4. 殘差獨立性（Independence）</h3>
+                    <p class="assump-desc">Durbin-Watson 統計量為 <strong>1.751</strong>（接近理想值 2.0），表明樣本殘差間不存在嚴重之一階自相關問題。</p>
+                </div>
+
+                <div class="assumption-card passed">
+                    <div class="assump-badge">通過檢定 ✓</div>
+                    <h3 class="assump-title">5. 無嚴重共線性（Multicollinearity）</h3>
+                    <p class="assump-desc">變異數膨脹因子（VIF）：R&D (2.62)、Marketing (2.70)、Admin (1.16)、State (1.47)，均遠低於警戒臨界值 5~10。</p>
+                </div>
+
+                <div class="assumption-card highlight-assump">
+                    <div class="assump-badge badge-star">決策結論 ⭐</div>
+                    <h3 class="assump-title">企業投資策略意涵</h3>
+                    <p class="assump-desc">新創公司的獲利高度集中由研發能力（R&D）驅動，行政營運與所在地理位置並非關鍵分水嶺，資源應優先傾注於核心產品技術。</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <p>50 Startups Dataset Multiple Linear Regression Web Studio &copy; 2026</p>
+            <p class="footer-sub">
+                Designed & Built for GitHub Pages Deployment | Repository: 
+                <a href="https://github.com/wupinlai/50_Startups-Dataset" target="_blank">wupinlai/50_Startups-Dataset</a>
+            </p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
