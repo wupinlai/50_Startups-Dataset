@@ -17,7 +17,7 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=3.0">
+    <link rel="stylesheet" href="style.css?v=4.0">
 </head>
 <body>
     <!-- Background Glow Blobs -->
@@ -34,16 +34,6 @@
                     <span class="brand-title" id="nav-brand-title">ML Regression Studio</span>
                     <span class="brand-badge" id="nav-brand-badge">CRISP-DM 最佳化分析</span>
                 </div>
-            </div>
-
-            <!-- Project Switcher Dropdown in Navbar -->
-            <div class="project-selector-wrapper">
-                <span class="selector-badge">作業切換</span>
-                <select id="project-selector" class="project-dropdown" aria-label="選擇分析專案">
-                    <option value="startups" selected>🚀 HW 1: 50 Startups 新創利潤預測</option>
-                    <option value="spotify">🎵 HW 2: Spotify Tracks 音樂流行度預測</option>
-                    <option value="custom">🌐 自訂資料集分析 (Custom Dataset URL / CSV)</option>
-                </select>
             </div>
 
             <nav class="nav-links">
@@ -65,18 +55,18 @@
     <main class="main-content">
         <!-- Hero Section -->
         <section class="hero-section">
-            <!-- Hero Dropdown Switcher (Replacing Red-Box Toggle Buttons) -->
+            <!-- Unified Project & Dataset Selector (Single Unified Dropdown) -->
             <div class="hero-selector-wrapper">
                 <div class="hero-dropdown-card">
                     <div class="hero-dropdown-badge">
                         <span class="dropdown-glow-dot"></span>
-                        <label for="hero-project-selector" class="hero-dropdown-label">作業專案 / 資料集選擇</label>
+                        <label for="project-selector" class="hero-dropdown-label">作業專案 / 資料集選擇</label>
                     </div>
                     <div class="hero-select-box">
-                        <select id="hero-project-selector" class="hero-select-control" aria-label="選擇分析專案或資料集">
+                        <select id="project-selector" class="hero-select-control" aria-label="選擇分析專案或資料集">
                             <option value="startups" selected>🚀 HW 1: 50 Startups 利潤預測</option>
-                            <option value="spotify">🎵 HW 2: Spotify 音樂流行度預測</option>
-                            <option value="custom">🌐 自訂資料集分析 (任意輸入 CSV / URL)</option>
+                            <option value="spotify">🎵 HW 2: Spotify 音樂流行度預測 (需下載資料集)</option>
+                            <option value="custom">🌐 自訂資料集分析 (直接貼上 CSV 文本 / 網址)</option>
                         </select>
                         <div class="hero-select-arrow" aria-hidden="true">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -87,60 +77,66 @@
                 </div>
             </div>
 
+            <!-- Dynamic Project Dataset Download Action Bar -->
+            <div id="project-download-bar" class="project-download-bar"></div>
+
             <!-- Custom Dataset Input & Exploration Panel -->
             <div id="custom-dataset-panel" class="custom-dataset-panel" style="display: none;">
                 <div class="custom-card-glass">
                     <div class="custom-panel-header">
                         <div class="custom-panel-title-group">
                             <span class="custom-badge">自訂資料集引擎</span>
-                            <h3 class="custom-panel-title">🌐 任意輸入 CSV 資料集並即時執行多元線性迴歸 (MLR)</h3>
+                            <h3 class="custom-panel-title">🌐 直接貼上或輸入 CSV 資料集，即時執行多元線性迴歸 (MLR)</h3>
                         </div>
-                        <span class="custom-hint-tag">即時 OLS 擬合・動態圖表・自適應預測模擬</span>
+                        <span class="custom-hint-tag">即時 OLS 擬合・逐步特徵選取・自適應預測模擬</span>
                     </div>
 
                     <div class="custom-input-body">
-                        <!-- URL Input Bar -->
-                        <div class="custom-url-group">
-                            <div class="custom-url-bar">
-                                <span class="url-icon">🔗</span>
-                                <input type="url" id="custom-dataset-url" class="custom-url-input"
-                                       placeholder="輸入 CSV 檔案網址，例如：https://raw.githubusercontent.com/Avik-Jain/100-Days-Of-ML-Code/master/datasets/50_Startups.csv"
-                                       value="https://raw.githubusercontent.com/Avik-Jain/100-Days-Of-ML-Code/master/datasets/50_Startups.csv">
-                                <button type="button" id="btn-load-custom-url" class="btn-custom-action btn-primary-glow">
-                                    <span class="btn-icon">⚡</span> 載入並分析
+                        <!-- Direct CSV Paste Textarea Box (Visible by Default) -->
+                        <div class="custom-paste-box-wrap">
+                            <div class="paste-label-row">
+                                <label for="custom-csv-raw" class="paste-label">
+                                    <span class="paste-icon">📝</span>
+                                    <span>在此直接貼上自訂 CSV 資料集（第一行為欄位標題，支援逗號分隔）：</span>
+                                </label>
+                                <span class="paste-hint-badge">自動判讀數值特徵與依變數</span>
+                            </div>
+                            <textarea id="custom-csv-raw" class="custom-textarea" rows="7" placeholder="第一行為標題欄位，例如：&#10;R&D Spend,Administration,Marketing Spend,State,Profit&#10;165349.20,136897.80,471784.10,New York,192261.83&#10;162597.70,151377.59,443898.53,California,191792.06"></textarea>
+                            
+                            <div class="paste-action-bar">
+                                <button type="button" id="btn-parse-paste-csv" class="btn-custom-action btn-primary-glow">
+                                    <span class="btn-icon">⚡</span> 立即分析貼上的資料集 (Analyze Pasted CSV)
+                                </button>
+                                <div class="quick-preset-chips">
+                                    <span class="quick-label">快速帶入範例：</span>
+                                    <button type="button" id="btn-sample-startups" class="preset-sample-btn">🚀 50 Startups</button>
+                                    <button type="button" id="btn-sample-advertising" class="preset-sample-btn">📈 廣告銷售 (Sales)</button>
+                                    <button type="button" id="btn-sample-housing" class="preset-sample-btn">🏠 房屋價格 (Price)</button>
+                                </div>
+                                <button type="button" id="btn-clear-paste" class="btn-custom-action btn-sm btn-ghost">
+                                    🗑️ 清空
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Actions bar: Quick presets, local file upload, paste text -->
-                        <div class="custom-actions-bar">
-                            <div class="quick-preset-chips">
-                                <span class="quick-label">快速載入範例：</span>
-                                <button type="button" class="preset-url-btn" data-url="https://raw.githubusercontent.com/Avik-Jain/100-Days-Of-ML-Code/master/datasets/50_Startups.csv">
-                                    🚀 50 Startups (Avik-Jain Raw CSV)
-                                </button>
-                                <button type="button" class="preset-url-btn" data-url="50_Startups.csv">
-                                    📁 本地 50_Startups.csv
-                                </button>
+                        <!-- Secondary Input Methods: File Upload & URL -->
+                        <div class="custom-secondary-row">
+                            <div class="custom-url-group">
+                                <div class="custom-url-bar">
+                                    <span class="url-icon">🔗</span>
+                                    <input type="url" id="custom-dataset-url" class="custom-url-input"
+                                           placeholder="或輸入遠端 CSV 網址，例如：https://raw.githubusercontent.com/.../50_Startups.csv"
+                                           value="https://raw.githubusercontent.com/Avik-Jain/100-Days-Of-ML-Code/master/datasets/50_Startups.csv">
+                                    <button type="button" id="btn-load-custom-url" class="btn-custom-action btn-sm btn-accent-glow">
+                                        <span class="btn-icon">⚡</span> 載入網址
+                                    </button>
+                                </div>
                             </div>
-
                             <div class="custom-upload-group">
                                 <label for="custom-file-upload" class="upload-file-btn">
-                                    <span>📂 上傳本機 CSV</span>
+                                    <span>📂 上傳本機 CSV 檔案</span>
                                     <input type="file" id="custom-file-upload" accept=".csv,text/csv" style="display: none;">
                                 </label>
-                                <button type="button" id="btn-toggle-csv-paste" class="paste-toggle-btn">
-                                    📝 貼上 CSV 文本
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Expandable Raw CSV Textarea -->
-                        <div id="custom-paste-box" class="custom-paste-container" style="display: none;">
-                            <textarea id="custom-csv-raw" class="custom-textarea" rows="5" placeholder="在此直接貼上 CSV 文本內容（第一行為欄位名稱標題，例如：R&D Spend,Administration,Marketing Spend,State,Profit...）"></textarea>
-                            <div class="paste-actions">
-                                <button type="button" id="btn-parse-paste-csv" class="btn-custom-action btn-sm">解析貼上的 CSV</button>
-                                <span class="paste-hint">支援逗號分隔（CSV）與自動數值/類別特徵判讀</span>
                             </div>
                         </div>
 
@@ -437,6 +433,6 @@
         </div>
     </footer>
 
-    <script src="app.js?v=3.0"></script>
+    <script src="app.js?v=4.0"></script>
 </body>
 </html>

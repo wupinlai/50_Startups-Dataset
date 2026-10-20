@@ -2548,32 +2548,77 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Project Switcher Setup
 function initProjectSwitcher() {
-    const navDropdown = document.getElementById("project-selector");
-    const heroDropdown = document.getElementById("hero-project-selector");
-    const tabStartups = document.getElementById("tab-startups-btn");
-    const tabSpotify = document.getElementById("tab-spotify-btn");
-
-    if (navDropdown) {
-        navDropdown.addEventListener("change", (e) => {
+    const selector = document.getElementById("project-selector");
+    if (selector) {
+        selector.addEventListener("change", (e) => {
             switchProject(e.target.value);
         });
     }
-
-    if (heroDropdown) {
-        heroDropdown.addEventListener("change", (e) => {
-            switchProject(e.target.value);
-        });
-    }
-
-    if (tabStartups) {
-        tabStartups.addEventListener("click", () => switchProject("startups"));
-    }
-
-    if (tabSpotify) {
-        tabSpotify.addEventListener("click", () => switchProject("spotify"));
-    }
-
     initCustomDatasetEngine();
+}
+
+// Render Dynamic Dataset Download Pills
+function renderDownloadBar(projectId) {
+    const bar = document.getElementById("project-download-bar");
+    if (!bar) return;
+    if (projectId === "startups") {
+        bar.innerHTML = `
+            <a href="50_Startups.csv" download="50_Startups.csv" class="dataset-download-pill" title="點擊下載 50 Startups CSV 原始資料">
+                <span class="pill-icon">📥</span>
+                <span class="pill-text">下載 50 Startups 資料集 (50_Startups.csv, 2.4KB)</span>
+            </a>
+        `;
+    } else if (projectId === "spotify") {
+        bar.innerHTML = `
+            <a href="HW2/spotify_dataset.csv" download="spotify_dataset.csv" class="dataset-download-pill pill-spotify" title="點擊下載 Spotify 114,000 首曲目完整大數據 CSV">
+                <span class="pill-icon">📥</span>
+                <span class="pill-text">下載 Spotify 音樂流行度預測完整資料集 (spotify_dataset.csv, ~20MB)</span>
+            </a>
+            <a href="HW2/sample_tracks.json" download="sample_tracks.json" class="dataset-download-pill pill-secondary" title="點擊下載 100 首精選曲目 JSON">
+                <span class="pill-icon">📄</span>
+                <span class="pill-text">下載 100 首精選曲目 JSON</span>
+            </a>
+        `;
+    } else if (projectId === "custom") {
+        bar.innerHTML = `
+            <button type="button" id="btn-export-custom-csv" class="dataset-download-pill pill-custom" title="點擊下載目前分析之自訂 CSV 資料">
+                <span class="pill-icon">📥</span>
+                <span class="pill-text">下載 / 匯出目前自訂資料集 CSV</span>
+            </button>
+        `;
+        const exportBtn = document.getElementById("btn-export-custom-csv");
+        if (exportBtn) {
+            exportBtn.addEventListener("click", exportCustomDatasetCSV);
+        }
+    }
+}
+
+function exportCustomDatasetCSV() {
+    if (!customDatasetRaw || !customDatasetRaw.rows || customDatasetRaw.rows.length === 0) {
+        setCustomStatus("⚠️ 尚無已載入的自訂資料集可供下載", "error");
+        return;
+    }
+    const headers = customDatasetRaw.headers;
+    let csvContent = headers.join(",") + "\n";
+    customDatasetRaw.rows.forEach(row => {
+        const line = headers.map(h => {
+            let val = String(row[h] ?? "");
+            if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+                val = `"${val.replace(/"/g, '""')}"`;
+            }
+            return val;
+        }).join(",");
+        csvContent += line + "\n";
+    });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `custom_dataset_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 function switchProject(projectId) {
@@ -2581,30 +2626,29 @@ function switchProject(projectId) {
     const config = PROJECT_CONFIGS[projectId];
     if (!config) return;
 
-    // Sync navbar and hero dropdowns
-    const navDropdown = document.getElementById("project-selector");
-    const heroDropdown = document.getElementById("hero-project-selector");
-    if (navDropdown && navDropdown.value !== projectId) navDropdown.value = projectId;
-    if (heroDropdown && heroDropdown.value !== projectId) heroDropdown.value = projectId;
+    // Sync single dropdown selector
+    const selector = document.getElementById("project-selector");
+    if (selector && selector.value !== projectId) selector.value = projectId;
+
+    // Render dataset download pill buttons
+    renderDownloadBar(projectId);
 
     // Toggle custom dataset input panel
     const customPanel = document.getElementById("custom-dataset-panel");
     if (customPanel) {
         if (projectId === "custom") {
             customPanel.style.display = "block";
+            const textareaPaste = document.getElementById("custom-csv-raw");
+            if (textareaPaste && !textareaPaste.value.trim()) {
+                textareaPaste.value = getEmbeddedStartupsCSV();
+            }
             if (!customDatasetLoaded) {
-                loadCustomDatasetFromUrl("https://raw.githubusercontent.com/Avik-Jain/100-Days-Of-ML-Code/master/datasets/50_Startups.csv");
+                const text = (textareaPaste && textareaPaste.value.trim()) ? textareaPaste.value.trim() : getEmbeddedStartupsCSV();
+                loadCustomDatasetFromText(text, "50 Startups 自訂資料集");
             }
         } else {
             customPanel.style.display = "none";
         }
-    }
-
-    const tabStartups = document.getElementById("tab-startups-btn");
-    const tabSpotify = document.getElementById("tab-spotify-btn");
-    if (tabStartups && tabSpotify) {
-        tabStartups.classList.toggle("active", projectId === "startups");
-        tabSpotify.classList.toggle("active", projectId === "spotify");
     }
 
     // Update Brand & Navbar
@@ -2922,7 +2966,7 @@ function renderCalculatorInputs() {
             </div>
         `;
         bindStartupsInputs();
-    } else {
+    } else if (currentProject === "spotify") {
         // Spotify Audio Features Inputs
         container.innerHTML = `
             <div class="calc-spotify-grid">
@@ -3095,7 +3139,7 @@ function applyPreset(presetIndex) {
         document.getElementById("admin-val").textContent = `$${p.admin.toLocaleString()}`;
 
         document.getElementById("state-select").value = p.state;
-    } else {
+    } else if (currentProject === "spotify") {
         document.getElementById("sp-dance").value = p.dance;
         document.getElementById("sp-dance-val").textContent = p.dance.toFixed(2);
 
@@ -3188,7 +3232,7 @@ function calculatePrediction() {
 
         formulaDisplay.textContent = activeFormula;
 
-    } else {
+    } else if (currentProject === "spotify") {
         // Spotify Popularity Prediction
         caption.textContent = "預測 Spotify 流行度分數 (Predicted Popularity: 0~100)";
         rankWrap.style.display = "flex";
@@ -3412,8 +3456,112 @@ let customFeatureCols = [];
 let customColStats = {}; // { [col]: { min, max, mean, count } }
 let customModelResult = null; // { beta, intercept, coefs, r2, adjR2, rmse, mae, dw, validN }
 
+const SAMPLE_ADVERTISING_CSV = `TV,Radio,Newspaper,Sales
+230.1,37.8,69.2,22.1
+44.5,39.3,45.1,10.4
+17.2,45.9,69.3,9.3
+151.5,41.3,58.5,18.5
+180.8,10.8,58.4,12.9
+8.7,48.9,75.0,7.2
+57.5,32.8,23.5,11.8
+120.2,19.6,11.6,13.2
+8.6,2.1,1.0,4.8
+199.8,2.6,21.2,10.6
+66.1,5.8,24.2,8.6
+214.7,24.0,4.0,17.4
+23.8,35.1,65.9,9.2
+97.5,7.6,7.2,9.7
+204.1,32.9,46.0,19.0
+195.4,47.7,52.9,22.4
+67.9,36.6,114.0,12.5
+281.4,39.6,55.8,24.4
+69.2,20.5,18.3,11.3
+147.3,23.9,19.1,14.6
+218.4,27.7,53.4,18.0
+237.4,5.1,23.5,12.5
+13.2,15.9,49.6,5.6
+228.3,16.9,26.2,15.5
+62.3,12.6,18.3,9.7
+262.9,3.5,19.5,12.0
+142.9,29.3,12.6,15.0
+240.1,16.7,22.9,15.9
+110.7,4.0,6.3,10.5`;
+
+const SAMPLE_HOUSING_CSV = `SquareFeet,Bedrooms,Bathrooms,AgeYears,Price
+2104,3,2,15,399.9
+1600,3,2,20,329.9
+2400,3,3,10,369.0
+1416,2,1,25,232.0
+3000,4,3,8,539.9
+1985,3,2,12,319.9
+1534,3,2,22,314.0
+1427,3,2,18,198.9
+1380,3,1,30,212.0
+1494,3,2,26,242.5
+1940,4,2,16,239.9
+2000,3,3,14,347.0
+1890,3,2,17,299.9
+4478,5,4,5,699.9
+1268,3,1,32,259.0
+2300,4,3,11,449.5
+1320,2,1,28,299.0
+1236,3,1,35,199.9
+2609,4,3,9,499.9
+3031,4,4,6,599.0`;
+
 function initCustomDatasetEngine() {
-    // 1. URL Load Button & Input
+    const textareaPaste = document.getElementById("custom-csv-raw");
+
+    // 1. Direct CSV Parse & Analyze Button
+    const btnParsePaste = document.getElementById("btn-parse-paste-csv");
+    if (btnParsePaste && textareaPaste) {
+        btnParsePaste.addEventListener("click", () => {
+            const text = textareaPaste.value.trim();
+            if (text) {
+                loadCustomDatasetFromText(text, "貼上之自訂 CSV 資料");
+            } else {
+                setCustomStatus("⚠️ 請先在上方文本方塊中貼上或輸入 CSV 內容", "error");
+            }
+        });
+    }
+
+    // 2. Clear Button
+    const btnClearPaste = document.getElementById("btn-clear-paste");
+    if (btnClearPaste && textareaPaste) {
+        btnClearPaste.addEventListener("click", () => {
+            textareaPaste.value = "";
+            textareaPaste.focus();
+            setCustomStatus("ℹ️ 文本方塊已清空，請貼上自訂 CSV 或點選範例快速載入", "info");
+        });
+    }
+
+    // 3. Preset Sample Buttons
+    const btnSampleStartups = document.getElementById("btn-sample-startups");
+    if (btnSampleStartups && textareaPaste) {
+        btnSampleStartups.addEventListener("click", () => {
+            const text = getEmbeddedStartupsCSV();
+            textareaPaste.value = text;
+            loadCustomDatasetFromText(text, "50 Startups 範例資料集");
+        });
+    }
+
+    const btnSampleAdv = document.getElementById("btn-sample-advertising");
+    if (btnSampleAdv && textareaPaste) {
+        btnSampleAdv.addEventListener("click", () => {
+            textareaPaste.value = SAMPLE_ADVERTISING_CSV;
+            loadCustomDatasetFromText(SAMPLE_ADVERTISING_CSV, "廣告銷售 ROI 資料集 (Advertising)");
+        });
+    }
+
+    const btnSampleHousing = document.getElementById("btn-sample-housing");
+    if (btnSampleHousing && textareaPaste) {
+        btnSampleHousing.addEventListener("click", () => {
+            textareaPaste.value = SAMPLE_HOUSING_CSV;
+            loadCustomDatasetFromText(SAMPLE_HOUSING_CSV, "房屋價格資料集 (Housing)");
+        });
+    }
+
+    // 4. URL Load Button & Input
     const btnLoadUrl = document.getElementById("btn-load-custom-url");
     const inputUrl = document.getElementById("custom-dataset-url");
     if (btnLoadUrl && inputUrl) {
@@ -3429,16 +3577,7 @@ function initCustomDatasetEngine() {
         });
     }
 
-    // 2. Preset URL Buttons
-    document.querySelectorAll(".preset-url-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const url = btn.dataset.url;
-            if (inputUrl) inputUrl.value = url;
-            loadCustomDatasetFromUrl(url);
-        });
-    });
-
-    // 3. File Upload Input
+    // 5. File Upload Input
     const fileInput = document.getElementById("custom-file-upload");
     if (fileInput) {
         fileInput.addEventListener("change", (e) => {
@@ -3446,37 +3585,16 @@ function initCustomDatasetEngine() {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (evt) => {
-                    loadCustomDatasetFromText(evt.target.result, file.name);
+                    const text = evt.target.result;
+                    if (textareaPaste) textareaPaste.value = text;
+                    loadCustomDatasetFromText(text, file.name);
                 };
                 reader.readAsText(file);
             }
         });
     }
 
-    // 4. Paste Toggle & Parse
-    const btnTogglePaste = document.getElementById("btn-toggle-csv-paste");
-    const pasteBox = document.getElementById("custom-paste-box");
-    if (btnTogglePaste && pasteBox) {
-        btnTogglePaste.addEventListener("click", () => {
-            const isHidden = pasteBox.style.display === "none";
-            pasteBox.style.display = isHidden ? "block" : "none";
-        });
-    }
-
-    const btnParsePaste = document.getElementById("btn-parse-paste-csv");
-    const textareaPaste = document.getElementById("custom-csv-raw");
-    if (btnParsePaste && textareaPaste) {
-        btnParsePaste.addEventListener("click", () => {
-            const text = textareaPaste.value.trim();
-            if (text) {
-                loadCustomDatasetFromText(text, "直接貼上之 CSV 資料");
-            } else {
-                setCustomStatus("⚠️ 請先在下方文本方塊中貼上 CSV 內容", "error");
-            }
-        });
-    }
-
-    // 5. Target Select Change
+    // 6. Target Select Change
     const targetSelect = document.getElementById("custom-target-select");
     if (targetSelect) {
         targetSelect.addEventListener("change", (e) => {
@@ -3486,7 +3604,7 @@ function initCustomDatasetEngine() {
         });
     }
 
-    // 6. Recompute Model Button
+    // 7. Recompute Model Button
     const btnRecompute = document.getElementById("btn-recompute-custom");
     if (btnRecompute) {
         btnRecompute.addEventListener("click", () => {
