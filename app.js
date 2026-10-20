@@ -2467,6 +2467,70 @@ const PROJECT_CONFIGS = {
                 isHighlight: true
             }
         ]
+    },
+
+    custom: {
+        id: "custom",
+        navLogo: "CS",
+        navTitle: "Custom Dataset MLR",
+        navBadge: "即時雲端/本地分析",
+        heroTags: [
+            { text: "自訂資料集引擎", class: "tag-primary" },
+            { text: "即時 OLS 矩陣多元迴歸", class: "tag-secondary" },
+            { text: "自適應特徵工程", class: "tag-accent" }
+        ],
+        heroTitle: "自訂資料集多元線性迴歸決策分析",
+        heroDesc: "透過 URL 或本地上傳任意 CSV 資料集，系統自動進行特徵判讀、OLS 最小平方法矩陣求解、特徵重要性評估與即時互動預測模擬。",
+        kpi: {
+            r2Val: "94.74%",
+            r2Sub: "自訂資料集最佳擬合",
+            r2Badge: "R² 擬合優度",
+            rmseVal: "$8,198.80",
+            rmseSub: "均方根誤差指標",
+            rmseBadge: "RMSE 評估",
+            driverLabel: "核心驅動特徵",
+            driverIcon: "💡",
+            driverVal: "分析中",
+            driverSub: "依權重絕對值排序",
+            driverBadge: "主要預測因子",
+            dimLabel: "資料集樣本維度",
+            dimIcon: "📊",
+            dimVal: "50 筆 / 4 特徵",
+            dimSub: "自動識別數值與類別特徵",
+            dimBadge: "自訂資料"
+        },
+        fs: {
+            title: "自訂資料集特徵逐步選取分析（Forward Stepwise Selection）",
+            subtitle: "評估依序納入各項特徵時，模型 RMSE 誤差與 R² 解譯力之邊際改善軌跡",
+            data: [],
+            bestStep: 1,
+            xAxisLabels: [1],
+            rmseLimits: { min: 0, max: 100, step: 10 },
+            r2Limits: { min: 0, max: 1, step: 0.1 },
+            rmseUnit: ""
+        },
+        calc: {
+            title: "即時自訂特徵預測模擬器 (Custom Dataset Inference Engine)",
+            subtitle: "調整已選定之自變數數值，即時推估目標依變數之預測值與信賴區間",
+            models: [
+                { id: "custom_ols", name: "⚡ OLS 最小平方法全特徵擬合模型" }
+            ],
+            presets: []
+        },
+        dataset: {
+            title: "自訂資料集表格檢視器 (Custom Dataset Table Explorer)",
+            subtitle: "支援全域全文搜尋、多欄位瀏覽與自適應分頁顯示",
+            filterLabel: "資料欄位",
+            filterOptions: [
+                { val: "all", text: "全部記錄" }
+            ]
+        },
+        diagnostic: {
+            title: "📊 迴歸統計指標與殘差分佈分析",
+            imgSrc: "regression_diagnostic_plots.png",
+            sampleBadge: "用戶自訂資料集"
+        },
+        assumptions: []
     }
 };
 
@@ -2484,12 +2548,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Project Switcher Setup
 function initProjectSwitcher() {
-    const dropdown = document.getElementById("project-selector");
+    const navDropdown = document.getElementById("project-selector");
+    const heroDropdown = document.getElementById("hero-project-selector");
     const tabStartups = document.getElementById("tab-startups-btn");
     const tabSpotify = document.getElementById("tab-spotify-btn");
 
-    if (dropdown) {
-        dropdown.addEventListener("change", (e) => {
+    if (navDropdown) {
+        navDropdown.addEventListener("change", (e) => {
+            switchProject(e.target.value);
+        });
+    }
+
+    if (heroDropdown) {
+        heroDropdown.addEventListener("change", (e) => {
             switchProject(e.target.value);
         });
     }
@@ -2501,15 +2572,33 @@ function initProjectSwitcher() {
     if (tabSpotify) {
         tabSpotify.addEventListener("click", () => switchProject("spotify"));
     }
+
+    initCustomDatasetEngine();
 }
 
 function switchProject(projectId) {
     currentProject = projectId;
     const config = PROJECT_CONFIGS[projectId];
+    if (!config) return;
 
-    // Sync dropdown and tabs
-    const dropdown = document.getElementById("project-selector");
-    if (dropdown && dropdown.value !== projectId) dropdown.value = projectId;
+    // Sync navbar and hero dropdowns
+    const navDropdown = document.getElementById("project-selector");
+    const heroDropdown = document.getElementById("hero-project-selector");
+    if (navDropdown && navDropdown.value !== projectId) navDropdown.value = projectId;
+    if (heroDropdown && heroDropdown.value !== projectId) heroDropdown.value = projectId;
+
+    // Toggle custom dataset input panel
+    const customPanel = document.getElementById("custom-dataset-panel");
+    if (customPanel) {
+        if (projectId === "custom") {
+            customPanel.style.display = "block";
+            if (!customDatasetLoaded) {
+                loadCustomDatasetFromUrl("https://raw.githubusercontent.com/Avik-Jain/100-Days-Of-ML-Code/master/datasets/50_Startups.csv");
+            }
+        } else {
+            customPanel.style.display = "none";
+        }
+    }
 
     const tabStartups = document.getElementById("tab-startups-btn");
     const tabSpotify = document.getElementById("tab-spotify-btn");
@@ -2627,7 +2716,9 @@ function renderFeatureTable() {
         tr.dataset.step = item.num;
         if (item.num === currentSelectedStep) tr.className = "active-row";
 
-        const formattedRMSE = currentProject === "startups" ? `$${item.rmse.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : item.rmse.toFixed(4);
+        const formattedRMSE = currentProject === "startups" 
+            ? `$${item.rmse.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+            : item.rmse.toLocaleString(undefined, { maximumFractionDigits: 4 });
         const formattedR2 = item.r2.toFixed(6);
 
         tr.innerHTML = `
@@ -2661,7 +2752,11 @@ function updateCharts() {
     if (rmseChartInstance) rmseChartInstance.destroy();
     if (r2ChartInstance) r2ChartInstance.destroy();
 
-    const chartColors = currentProject === "startups" ? { primary: "#3b82f6", glow: "rgba(59, 130, 246, 0.2)" } : { primary: "#10b981", glow: "rgba(16, 185, 129, 0.2)" };
+    const chartColors = currentProject === "startups" 
+        ? { primary: "#3b82f6", glow: "rgba(59, 130, 246, 0.2)" } 
+        : currentProject === "spotify" 
+        ? { primary: "#10b981", glow: "rgba(16, 185, 129, 0.2)" } 
+        : { primary: "#ec4899", glow: "rgba(236, 72, 153, 0.2)" };
 
     rmseChartInstance = new Chart(rmseCtx, {
         type: "line",
@@ -2915,6 +3010,8 @@ function renderCalculatorInputs() {
             </div>
         `;
         bindSpotifyInputs();
+    } else if (currentProject === "custom") {
+        renderCustomCalculatorInputs();
     }
 }
 
@@ -3161,6 +3258,8 @@ function calculatePrediction() {
         document.getElementById("box-4-val").textContent = activeModelId === "full10" ? "十特徵全模型" : "九特徵最佳頂峰";
 
         formulaDisplay.textContent = activeFormula;
+    } else if (currentProject === "custom") {
+        calculateCustomPrediction();
     }
 }
 
@@ -3213,7 +3312,7 @@ function renderDatasetTable(dataToRender = null) {
             </tr>
         `).join("");
         status.textContent = `共顯示 ${data.length} 筆新創企業資料`;
-    } else {
+    } else if (currentProject === "spotify") {
         // Spotify Curated Tracks
         const data = dataToRender || SPOTIFY_SAMPLE_TRACKS;
         thead.innerHTML = `
@@ -3246,6 +3345,8 @@ function renderDatasetTable(dataToRender = null) {
             </tr>
         `).join("");
         status.textContent = `共顯示 ${data.length} 首精選曲目資料 (全資料庫包含 114,000 首)`;
+    } else {
+        renderCustomDatasetTable(dataToRender);
     }
 }
 
@@ -3264,7 +3365,7 @@ function filterDataset() {
             return matchesCat && matchesQuery;
         });
         renderDatasetTable(filtered);
-    } else {
+    } else if (currentProject === "spotify") {
         let filtered = SPOTIFY_SAMPLE_TRACKS.filter(r => {
             const matchesCat = category === "all" || r.genre.toLowerCase() === category.toLowerCase();
             const matchesQuery = !query ||
@@ -3275,6 +3376,8 @@ function filterDataset() {
             return matchesCat && matchesQuery;
         });
         renderDatasetTable(filtered);
+    } else {
+        filterCustomDataset(query);
     }
 }
 
@@ -3295,3 +3398,818 @@ function renderAssumptions() {
         container.appendChild(card);
     });
 }
+
+// ==========================================================================
+// 11. Custom Dataset Engine & In-Browser OLS Regression Solver
+// ==========================================================================
+
+let customDatasetLoaded = false;
+let customDatasetRaw = null; // { headers: [], rows: [] }
+let customNumericCols = [];
+let customCategoricalCols = [];
+let customTargetCol = "";
+let customFeatureCols = [];
+let customColStats = {}; // { [col]: { min, max, mean, count } }
+let customModelResult = null; // { beta, intercept, coefs, r2, adjR2, rmse, mae, dw, validN }
+
+function initCustomDatasetEngine() {
+    // 1. URL Load Button & Input
+    const btnLoadUrl = document.getElementById("btn-load-custom-url");
+    const inputUrl = document.getElementById("custom-dataset-url");
+    if (btnLoadUrl && inputUrl) {
+        btnLoadUrl.addEventListener("click", () => {
+            const url = inputUrl.value.trim();
+            if (url) loadCustomDatasetFromUrl(url);
+        });
+        inputUrl.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                const url = inputUrl.value.trim();
+                if (url) loadCustomDatasetFromUrl(url);
+            }
+        });
+    }
+
+    // 2. Preset URL Buttons
+    document.querySelectorAll(".preset-url-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const url = btn.dataset.url;
+            if (inputUrl) inputUrl.value = url;
+            loadCustomDatasetFromUrl(url);
+        });
+    });
+
+    // 3. File Upload Input
+    const fileInput = document.getElementById("custom-file-upload");
+    if (fileInput) {
+        fileInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    loadCustomDatasetFromText(evt.target.result, file.name);
+                };
+                reader.readAsText(file);
+            }
+        });
+    }
+
+    // 4. Paste Toggle & Parse
+    const btnTogglePaste = document.getElementById("btn-toggle-csv-paste");
+    const pasteBox = document.getElementById("custom-paste-box");
+    if (btnTogglePaste && pasteBox) {
+        btnTogglePaste.addEventListener("click", () => {
+            const isHidden = pasteBox.style.display === "none";
+            pasteBox.style.display = isHidden ? "block" : "none";
+        });
+    }
+
+    const btnParsePaste = document.getElementById("btn-parse-paste-csv");
+    const textareaPaste = document.getElementById("custom-csv-raw");
+    if (btnParsePaste && textareaPaste) {
+        btnParsePaste.addEventListener("click", () => {
+            const text = textareaPaste.value.trim();
+            if (text) {
+                loadCustomDatasetFromText(text, "直接貼上之 CSV 資料");
+            } else {
+                setCustomStatus("⚠️ 請先在下方文本方塊中貼上 CSV 內容", "error");
+            }
+        });
+    }
+
+    // 5. Target Select Change
+    const targetSelect = document.getElementById("custom-target-select");
+    if (targetSelect) {
+        targetSelect.addEventListener("change", (e) => {
+            customTargetCol = e.target.value;
+            renderCustomFeatureCheckboxes();
+            fitCustomModel("自訂資料集");
+        });
+    }
+
+    // 6. Recompute Model Button
+    const btnRecompute = document.getElementById("btn-recompute-custom");
+    if (btnRecompute) {
+        btnRecompute.addEventListener("click", () => {
+            updateSelectedFeaturesFromCheckboxes();
+            fitCustomModel("自訂資料集");
+        });
+    }
+}
+
+function parseCSV(text) {
+    const rawLines = text.trim().split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
+    if (rawLines.length < 2) {
+        throw new Error("CSV 資料筆數過少，至少需包含 1 行標題行與 1 行數據。");
+    }
+
+    function parseCSVLine(line) {
+        const result = [];
+        let cur = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"' || char === "'") {
+                if (inQuotes && line[i + 1] === char) {
+                    cur += char;
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                result.push(cur.trim());
+                cur = "";
+            } else {
+                cur += char;
+            }
+        }
+        result.push(cur.trim());
+        return result;
+    }
+
+    const headers = parseCSVLine(rawLines[0]);
+    const rows = [];
+    for (let i = 1; i < rawLines.length; i++) {
+        const vals = parseCSVLine(rawLines[i]);
+        if (vals.length === headers.length) {
+            const obj = {};
+            headers.forEach((h, idx) => {
+                obj[h] = vals[idx];
+            });
+            rows.push(obj);
+        }
+    }
+    return { headers, rows };
+}
+
+async function loadCustomDatasetFromUrl(url) {
+    setCustomStatus(`⏳ 正在連線下載資料集：${url}...`, "info");
+    const is50Startups = url.includes("50_Startups") || url.includes("Startups");
+
+    try {
+        let text = "";
+        if (url === "50_Startups.csv" || url === "local:50_Startups.csv") {
+            try {
+                const res = await fetch("50_Startups.csv");
+                if (res.ok) text = await res.text();
+                else throw new Error("Local file fetch not ok");
+            } catch (e) {
+                text = getEmbeddedStartupsCSV();
+            }
+        } else {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP 狀態碼 ${res.status} ${res.statusText}`);
+                text = await res.text();
+            } catch (fetchErr) {
+                if (is50Startups) {
+                    console.warn("External fetch fallback to embedded 50 Startups CSV:", fetchErr);
+                    text = getEmbeddedStartupsCSV();
+                    setCustomStatus(`⚠️ 外部跨域連線限制，已無縫載入本地 50_Startups.csv 資料集！`, "success");
+                } else {
+                    throw fetchErr;
+                }
+            }
+        }
+
+        loadCustomDatasetFromText(text, url.split("/").pop() || "50_Startups.csv");
+    } catch (err) {
+        console.error("Custom dataset load error:", err);
+        setCustomStatus(`❌ 網址載入失敗：${err.message}。建議您：點擊「上傳本機 CSV」或「貼上 CSV 文本」直接分析！`, "error");
+    }
+}
+
+function getEmbeddedStartupsCSV() {
+    const header = "R&D Spend,Administration,Marketing Spend,State,Profit\n";
+    const body = STARTUPS_DATA.map(r => `${r.rd},${r.admin},${r.mktg},${r.state},${r.profit}`).join("\n");
+    return header + body;
+}
+
+function setCustomStatus(msg, type = "info") {
+    const banner = document.getElementById("custom-status-msg");
+    if (!banner) return;
+    banner.style.display = "flex";
+    banner.className = `custom-status-banner status-${type}`;
+    banner.innerHTML = msg;
+}
+
+function loadCustomDatasetFromText(text, sourceName = "自訂資料集") {
+    try {
+        const parsed = parseCSV(text);
+        if (parsed.rows.length === 0) {
+            throw new Error("解析後無有效資料列");
+        }
+
+        customDatasetRaw = parsed;
+        customDatasetLoaded = true;
+
+        const { numericCols, categoricalCols } = detectColumnTypes(parsed.headers, parsed.rows);
+        if (numericCols.length < 2) {
+            throw new Error("數值型特徵欄位不足（至少需 1 個自變數特徵與 1 個依變數目標欄位）");
+        }
+
+        customNumericCols = numericCols;
+        customCategoricalCols = categoricalCols;
+
+        // Calculate stats
+        customColStats = {};
+        numericCols.forEach(col => {
+            const vals = parsed.rows.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+            const min = Math.min(...vals);
+            const max = Math.max(...vals);
+            const sum = vals.reduce((a, b) => a + b, 0);
+            const mean = sum / (vals.length || 1);
+            customColStats[col] = { min, max, mean, count: vals.length };
+        });
+
+        // Auto-select target column
+        const targetKeywords = ["profit", "popularity", "target", "price", "sales", "revenue", "y"];
+        const foundTarget = numericCols.find(c => targetKeywords.some(k => c.toLowerCase().includes(k)));
+        customTargetCol = foundTarget || numericCols[numericCols.length - 1];
+
+        // Auto-select features (all numeric except target)
+        customFeatureCols = numericCols.filter(c => c !== customTargetCol);
+
+        updateCustomConfigUI(sourceName);
+        fitCustomModel(sourceName);
+
+        setCustomStatus(`✅ 成功載入【${sourceName}】：共 ${parsed.rows.length} 筆資料、${parsed.headers.length} 個欄位（已啟用 ${customFeatureCols.length} 項預測特徵）！`, "success");
+
+        if (currentProject !== "custom") {
+            switchProject("custom");
+        }
+    } catch (err) {
+        console.error("Parse custom CSV error:", err);
+        setCustomStatus(`❌ 資料解析失敗：${err.message}`, "error");
+    }
+}
+
+function detectColumnTypes(headers, rows) {
+    const numericCols = [];
+    const categoricalCols = [];
+    const sampleSize = Math.min(rows.length, 100);
+
+    headers.forEach(h => {
+        let numCount = 0;
+        let validCount = 0;
+        for (let i = 0; i < sampleSize; i++) {
+            const val = rows[i][h];
+            if (val !== "" && val !== null && val !== undefined) {
+                validCount++;
+                if (!isNaN(Number(val))) {
+                    numCount++;
+                }
+            }
+        }
+        if (validCount > 0 && numCount >= validCount * 0.8) {
+            numericCols.push(h);
+        } else {
+            categoricalCols.push(h);
+        }
+    });
+
+    return { numericCols, categoricalCols };
+}
+
+function updateCustomConfigUI(sourceName) {
+    const configBox = document.getElementById("custom-config-box");
+    if (configBox) configBox.style.display = "block";
+
+    const targetSelect = document.getElementById("custom-target-select");
+    if (targetSelect) {
+        targetSelect.innerHTML = customNumericCols.map(col => `
+            <option value="${col}" ${col === customTargetCol ? 'selected' : ''}>🎯 ${col}</option>
+        `).join("");
+    }
+
+    renderCustomFeatureCheckboxes();
+}
+
+function renderCustomFeatureCheckboxes() {
+    const container = document.getElementById("custom-features-checkboxes");
+    if (!container) return;
+
+    const availableFeatures = customNumericCols.filter(c => c !== customTargetCol);
+    container.innerHTML = availableFeatures.map(col => {
+        const isChecked = customFeatureCols.includes(col);
+        return `
+            <label class="custom-check-item">
+                <input type="checkbox" value="${col}" ${isChecked ? 'checked' : ''} class="feature-checkbox">
+                <span>${col}</span>
+            </label>
+        `;
+    }).join("");
+
+    container.querySelectorAll(".feature-checkbox").forEach(cb => {
+        cb.addEventListener("change", () => {
+            updateSelectedFeaturesFromCheckboxes();
+        });
+    });
+}
+
+function updateSelectedFeaturesFromCheckboxes() {
+    const checked = Array.from(document.querySelectorAll("#custom-features-checkboxes .feature-checkbox:checked")).map(cb => cb.value);
+    if (checked.length === 0) {
+        alert("請至少勾選一個特徵變數作為預測自變數！");
+        return;
+    }
+    customFeatureCols = checked;
+}
+
+function solveLinearSystem(A, b) {
+    const n = b.length;
+    const M = A.map(row => [...row]);
+    const x = [...b];
+
+    for (let i = 0; i < n; i++) {
+        let maxRow = i;
+        let maxVal = Math.abs(M[i][i]);
+        for (let k = i + 1; k < n; k++) {
+            if (Math.abs(M[k][i]) > maxVal) {
+                maxVal = Math.abs(M[k][i]);
+                maxRow = k;
+            }
+        }
+        if (maxRow !== i) {
+            [M[i], M[maxRow]] = [M[maxRow], M[i]];
+            [x[i], x[maxRow]] = [x[maxRow], x[i]];
+        }
+
+        if (Math.abs(M[i][i]) < 1e-12) {
+            M[i][i] = 1e-12;
+        }
+
+        for (let k = i + 1; k < n; k++) {
+            const factor = M[k][i] / M[i][i];
+            x[k] -= factor * x[i];
+            for (let j = i; j < n; j++) {
+                M[k][j] -= factor * M[i][j];
+            }
+        }
+    }
+
+    const sol = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+        let sum = x[i];
+        for (let j = i + 1; j < n; j++) {
+            sum -= M[i][j] * sol[j];
+        }
+        sol[i] = sum / M[i][i];
+    }
+    return sol;
+}
+
+function fitOLS(rows, targetCol, featureCols) {
+    const N = rows.length;
+    const p = featureCols.length;
+    const m = p + 1;
+
+    const X = [];
+    const y = [];
+    for (let i = 0; i < N; i++) {
+        const yVal = parseFloat(rows[i][targetCol]);
+        if (isNaN(yVal)) continue;
+
+        const xRow = [1];
+        let rowValid = true;
+        for (let j = 0; j < p; j++) {
+            const xVal = parseFloat(rows[i][featureCols[j]]);
+            if (isNaN(xVal)) {
+                rowValid = false;
+                break;
+            }
+            xRow.push(xVal);
+        }
+        if (rowValid) {
+            X.push(xRow);
+            y.push(yVal);
+        }
+    }
+
+    const validN = y.length;
+    if (validN < m) {
+        throw new Error(`有效樣本數 (${validN}) 小於待估參數數量 (${m})`);
+    }
+
+    const A = Array.from({ length: m }, () => new Array(m).fill(0));
+    const b = new Array(m).fill(0);
+
+    for (let i = 0; i < validN; i++) {
+        for (let j = 0; j < m; j++) {
+            b[j] += X[i][j] * y[i];
+            for (let k = 0; k < m; k++) {
+                A[j][k] += X[i][j] * X[i][k];
+            }
+        }
+    }
+
+    // Regularize slightly for numerical safety
+    for (let j = 0; j < m; j++) {
+        A[j][j] += 1e-6;
+    }
+
+    const beta = solveLinearSystem(A, b);
+    const yMean = y.reduce((a, c) => a + c, 0) / validN;
+
+    let ssr = 0;
+    let sst = 0;
+    let maeSum = 0;
+    let dwNum = 0;
+    let prevResid = 0;
+
+    for (let i = 0; i < validN; i++) {
+        let yHat = 0;
+        for (let j = 0; j < m; j++) {
+            yHat += X[i][j] * beta[j];
+        }
+        const resid = y[i] - yHat;
+        ssr += resid * resid;
+        sst += Math.pow(y[i] - yMean, 2);
+        maeSum += Math.abs(resid);
+
+        if (i > 0) {
+            dwNum += Math.pow(resid - prevResid, 2);
+        }
+        prevResid = resid;
+    }
+
+    const r2 = sst > 0 ? Math.max(0, Math.min(1, 1 - (ssr / sst))) : 1;
+    const adjR2 = validN > m ? 1 - ((1 - r2) * (validN - 1) / (validN - p - 1)) : r2;
+    const rmse = Math.sqrt(ssr / validN);
+    const mae = maeSum / validN;
+    const dw = ssr > 0 ? (dwNum / ssr) : 2.0;
+
+    return {
+        validN,
+        beta,
+        intercept: beta[0],
+        coefs: beta.slice(1),
+        r2,
+        adjR2,
+        rmse,
+        mae,
+        dw,
+        featureCols,
+        targetCol
+    };
+}
+
+function computeStepwiseData(rows, targetCol, allFeatureCols) {
+    const selectedFeatures = [];
+    const remainingFeatures = [...allFeatureCols];
+    const stepsData = [];
+
+    while (remainingFeatures.length > 0) {
+        let bestFeature = null;
+        let bestResult = null;
+
+        for (const feat of remainingFeatures) {
+            const trialFeatures = [...selectedFeatures, feat];
+            try {
+                const res = fitOLS(rows, targetCol, trialFeatures);
+                if (!bestResult || res.rmse < bestResult.rmse) {
+                    bestResult = res;
+                    bestFeature = feat;
+                }
+            } catch (e) {
+                // Ignore degenerate subsets
+            }
+        }
+
+        if (!bestFeature || !bestResult) break;
+
+        selectedFeatures.push(bestFeature);
+        remainingFeatures.splice(remainingFeatures.indexOf(bestFeature), 1);
+
+        let formula = `${targetCol} = ${bestResult.intercept.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+        selectedFeatures.forEach((f, idx) => {
+            const c = bestResult.coefs[idx];
+            formula += ` ${c >= 0 ? '+' : '-'} ${Math.abs(c).toLocaleString(undefined, { maximumFractionDigits: 4 })} × (${f})`;
+        });
+
+        stepsData.push({
+            num: selectedFeatures.length,
+            name: `${selectedFeatures.length} 特徵模型`,
+            features: [...selectedFeatures],
+            rmse: bestResult.rmse,
+            r2: bestResult.r2,
+            adjR2: bestResult.adjR2,
+            formula: formula,
+            isBest: false
+        });
+    }
+
+    if (stepsData.length === 0) {
+        stepsData.push({
+            num: 1,
+            name: "單特徵模型",
+            features: [allFeatureCols[0] || "Feature"],
+            rmse: 0,
+            r2: 1,
+            adjR2: 1,
+            formula: `${targetCol} = 0`,
+            isBest: true
+        });
+    }
+
+    let minRmse = Infinity;
+    let bestIdx = 0;
+    stepsData.forEach((s, idx) => {
+        if (s.rmse < minRmse) {
+            minRmse = s.rmse;
+            bestIdx = idx;
+        }
+    });
+    stepsData[bestIdx].isBest = true;
+
+    return { stepsData, bestStep: stepsData[bestIdx].num };
+}
+
+function fitCustomModel(sourceName = "") {
+    if (!customDatasetRaw || customFeatureCols.length === 0 || !customTargetCol) return;
+
+    try {
+        const rows = customDatasetRaw.rows;
+        const res = fitOLS(rows, customTargetCol, customFeatureCols);
+        customModelResult = res;
+
+        const { stepsData, bestStep } = computeStepwiseData(rows, customTargetCol, customFeatureCols);
+
+        let maxAbsCoef = -1;
+        let topDriver = customFeatureCols[0];
+        let topDriverCoef = res.coefs[0] || 0;
+        res.coefs.forEach((c, idx) => {
+            if (Math.abs(c) > maxAbsCoef) {
+                maxAbsCoef = Math.abs(c);
+                topDriver = customFeatureCols[idx];
+                topDriverCoef = c;
+            }
+        });
+
+        const rmses = stepsData.map(s => s.rmse);
+        const r2s = stepsData.map(s => s.r2);
+        const minRmse = Math.min(...rmses);
+        const maxRmse = Math.max(...rmses);
+        const minR2 = Math.min(...r2s);
+        const maxR2 = Math.max(...r2s);
+
+        const datasetName = sourceName || "自訂資料集";
+
+        PROJECT_CONFIGS.custom = {
+            id: "custom",
+            navLogo: "CS",
+            navTitle: `MLR: ${customTargetCol}`,
+            navBadge: `N = ${res.validN}`,
+            heroTags: [
+                { text: `資料集：${datasetName}`, class: "tag-primary" },
+                { text: `R² = ${(res.r2 * 100).toFixed(2)}%`, class: "tag-secondary" },
+                { text: `${res.validN} 筆樣本・${customFeatureCols.length} 特徵`, class: "tag-accent" }
+            ],
+            heroTitle: `${datasetName} 多元線性迴歸分析與決策系統`,
+            heroDesc: `以【${customTargetCol}】為依變數（Target），分析 ${customFeatureCols.join("、")} 對其邊際影響，自動完成 OLS 矩陣求解與特徵重要性評估。`,
+            kpi: {
+                r2Val: `${(res.r2 * 100).toFixed(2)}%`,
+                r2Sub: `Adj R² = ${(res.adjR2 * 100).toFixed(2)}%`,
+                r2Badge: `R² = ${res.r2.toFixed(4)}`,
+                rmseVal: res.rmse.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                rmseSub: `MAE = ${res.mae.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+                rmseBadge: "均方根誤差",
+                driverLabel: "核心驅動特徵",
+                driverIcon: "🚀",
+                driverVal: `${topDriver}`,
+                driverSub: `係數 β = ${topDriverCoef.toFixed(4)} (${topDriverCoef >= 0 ? '正向' : '負向'}加權)`,
+                driverBadge: "主要因子",
+                dimLabel: "資料集樣本與特徵維度",
+                dimIcon: "📊",
+                dimVal: `${res.validN} 筆 / ${customFeatureCols.length} 特徵`,
+                dimSub: `已選取 ${customFeatureCols.length} 個數值自變數`,
+                dimBadge: "自訂資料"
+            },
+            fs: {
+                title: `${datasetName} 前向逐步特徵選取（Forward Stepwise Selection）`,
+                subtitle: `評估 ${customFeatureCols.length} 項特徵逐步加入時的 RMSE 與 R² 走勢，第 ${bestStep} 步達成最低 RMSE 誤差`,
+                data: stepsData,
+                bestStep: bestStep,
+                xAxisLabels: stepsData.map(s => s.num),
+                rmseLimits: { 
+                    min: Math.max(0, minRmse * 0.92), 
+                    max: maxRmse * 1.08, 
+                    step: (maxRmse - minRmse) / 5 || 1 
+                },
+                r2Limits: { 
+                    min: Math.max(0, minR2 * 0.95), 
+                    max: Math.min(1, maxR2 * 1.05), 
+                    step: (maxR2 - minR2) / 5 || 0.1 
+                },
+                rmseUnit: ""
+            },
+            calc: {
+                title: `即時【${customTargetCol}】預測模擬器 (Custom MLR Inference)`,
+                subtitle: `調整已選定之 ${customFeatureCols.length} 項特徵數值，即時推估預期目標數值`,
+                models: [
+                    { id: "custom_full", name: `⭐ OLS 最優模型 (${customFeatureCols.length} 特徵, R²: ${(res.r2 * 100).toFixed(2)}%)` }
+                ],
+                presets: []
+            },
+            dataset: {
+                title: `${datasetName} 資料庫檢視器 (共 ${rows.length} 筆記錄)`,
+                subtitle: `支援即時關鍵字過濾、全部欄位搜尋與數值對照`,
+                filterLabel: "資料檢視",
+                filterOptions: [
+                    { val: "all", text: `全部記錄 (${rows.length} 筆)` }
+                ]
+            },
+            diagnostic: {
+                title: `📊 統計診斷指標（DW 自相關檢定、殘差標準差與解釋力）`,
+                imgSrc: "regression_diagnostic_plots.png",
+                sampleBadge: `${res.validN} 筆自訂樣本`
+            },
+            assumptions: [
+                {
+                    title: "1. 殘差平均值（Zero Mean Residuals）",
+                    desc: `殘差均值極為接近零（~ 0.000），符合 OLS 理論無偏性之期望值條件。`,
+                    status: "通過檢定 ✓",
+                    isHighlight: false
+                },
+                {
+                    title: "2. 殘差獨立性檢定（Durbin-Watson）",
+                    desc: `Durbin-Watson 統計量為 ${res.dw.toFixed(3)}（理想標準基準值為 2.0，落在 1.5 ~ 2.5 即無嚴重自相關）。`,
+                    status: (res.dw >= 1.5 && res.dw <= 2.5) ? "通過檢定 ✓" : "觀察數值 ⚠️",
+                    isHighlight: false
+                },
+                {
+                    title: "3. 決定係數與擬合優度（Goodness of Fit）",
+                    desc: `多元迴歸模型解釋了目標變數 ${customTargetCol} 約 ${(res.r2 * 100).toFixed(2)}% 之整體變異量（Adj R² = ${(res.adjR2 * 100).toFixed(2)}%）。`,
+                    status: res.r2 >= 0.7 ? "高度解釋力 ⭐" : "已完成擬合 ✓",
+                    isHighlight: true
+                },
+                {
+                    title: "4. 誤差評估指標（RMSE & MAE）",
+                    desc: `均方根誤差 (RMSE) 為 ${res.rmse.toLocaleString(undefined, { maximumFractionDigits: 3 })}，平均絕對誤差 (MAE) 為 ${res.mae.toLocaleString(undefined, { maximumFractionDigits: 3 })}。`,
+                    status: "誤差指標 ✓",
+                    isHighlight: false
+                }
+            ]
+        };
+
+        const summaryText = document.getElementById("custom-model-summary-text");
+        if (summaryText) {
+            summaryText.textContent = `模型擬合成功：R² = ${(res.r2 * 100).toFixed(2)}%, RMSE = ${res.rmse.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+        }
+
+        if (currentProject === "custom") {
+            switchProject("custom");
+        }
+    } catch (e) {
+        console.error("Fit custom model error:", e);
+        setCustomStatus(`❌ 擬合模型失敗：${e.message}`, "error");
+    }
+}
+
+function renderCustomCalculatorInputs() {
+    const container = document.getElementById("dynamic-inputs-container");
+    const chipsBar = document.getElementById("preset-chips-bar");
+    chipsBar.innerHTML = "";
+
+    if (!customModelResult || customFeatureCols.length === 0) {
+        container.innerHTML = `<div style="padding: 1.5rem; color: #94a3b8; text-align: center;">尚未設定特徵變數</div>`;
+        return;
+    }
+
+    let html = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.15rem;">`;
+    customFeatureCols.forEach(col => {
+        const stats = customColStats[col] || { min: 0, max: 100, mean: 50 };
+        const range = stats.max - stats.min;
+        const step = range > 0 ? (range > 10 ? Math.round(range / 100) || 1 : (range / 100).toFixed(3)) : 1;
+        const meanVal = Number(stats.mean.toFixed(2));
+
+        html += `
+            <div class="input-group">
+                <div class="input-label-row">
+                    <label for="custom-input-${col}">📊 ${col}</label>
+                    <span class="val-display" id="custom-val-${col}">${meanVal.toLocaleString()}</span>
+                </div>
+                <input type="range" id="custom-slider-${col}" min="${stats.min}" max="${stats.max}" step="${step}" value="${meanVal}" class="modern-range">
+                <div class="num-input-wrap">
+                    <input type="number" id="custom-input-${col}" min="${stats.min * 1.5}" max="${stats.max * 1.5}" step="${step}" value="${meanVal}" class="modern-input" style="padding-left: 0.85rem;">
+                </div>
+            </div>
+        `;
+    });
+    html += `</div>`;
+    container.innerHTML = html;
+
+    bindCustomInputs();
+}
+
+function bindCustomInputs() {
+    customFeatureCols.forEach(col => {
+        const slider = document.getElementById(`custom-slider-${col}`);
+        const input = document.getElementById(`custom-input-${col}`);
+        const display = document.getElementById(`custom-val-${col}`);
+
+        if (slider && input && display) {
+            slider.addEventListener("input", (e) => {
+                input.value = e.target.value;
+                display.textContent = Number(e.target.value).toLocaleString();
+                calculatePrediction();
+            });
+            input.addEventListener("input", (e) => {
+                slider.value = e.target.value;
+                display.textContent = Number(e.target.value || 0).toLocaleString();
+                calculatePrediction();
+            });
+        }
+    });
+}
+
+function calculateCustomPrediction() {
+    if (!customModelResult) return;
+
+    const profitOutput = document.getElementById("profit-output");
+    const profitCI = document.getElementById("profit-ci");
+    const formulaDisplay = document.getElementById("formula-display");
+    const caption = document.getElementById("prediction-caption");
+    const rankWrap = document.getElementById("popularity-rank-wrap");
+
+    rankWrap.style.display = "none";
+    caption.textContent = `預測【${customTargetCol}】(Predicted ${customTargetCol})`;
+
+    let pred = customModelResult.intercept;
+    let formulaStr = `${customTargetCol} = ${customModelResult.intercept.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+
+    customFeatureCols.forEach((col, idx) => {
+        const val = parseFloat(document.getElementById(`custom-input-${col}`)?.value || customColStats[col]?.mean || 0);
+        const coef = customModelResult.coefs[idx];
+        pred += coef * val;
+        formulaStr += ` ${coef >= 0 ? '+' : '-'} ${Math.abs(coef).toLocaleString(undefined, { maximumFractionDigits: 4 })} × (${col})`;
+    });
+
+    profitOutput.textContent = pred.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const se = customModelResult.rmse / Math.sqrt(customModelResult.validN || 1);
+    const lowerCI = pred - 1.96 * se;
+    const upperCI = pred + 1.96 * se;
+    profitCI.textContent = `95% 統計信賴區間: ${lowerCI.toLocaleString(undefined, { maximumFractionDigits: 2 })} ~ ${upperCI.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+
+    document.getElementById("box-1-title").textContent = "決定係數 (R²)";
+    document.getElementById("box-1-val").textContent = `${(customModelResult.r2 * 100).toFixed(2)}%`;
+
+    document.getElementById("box-2-title").textContent = "均方根誤差 (RMSE)";
+    document.getElementById("box-2-val").textContent = customModelResult.rmse.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+    document.getElementById("box-3-title").textContent = "樣本數量";
+    document.getElementById("box-3-val").textContent = `${customModelResult.validN} 筆`;
+
+    document.getElementById("box-4-title").textContent = "特徵數量";
+    document.getElementById("box-4-val").textContent = `${customFeatureCols.length} 項`;
+
+    formulaDisplay.textContent = formulaStr;
+}
+
+function renderCustomDatasetTable(dataToRender = null) {
+    const thead = document.getElementById("data-table-head");
+    const tbody = document.getElementById("data-table-body");
+    const status = document.getElementById("table-status");
+
+    const data = dataToRender || (customDatasetRaw ? customDatasetRaw.rows : []);
+    const headers = customDatasetRaw ? customDatasetRaw.headers : [];
+    if (headers.length === 0) {
+        thead.innerHTML = "";
+        tbody.innerHTML = `<tr><td style="text-align: center; color: #94a3b8; padding: 2rem;">尚未載入自訂資料集</td></tr>`;
+        status.textContent = "共顯示 0 筆記錄";
+        return;
+    }
+
+    thead.innerHTML = `
+        <tr>
+            <th style="width: 50px;">#</th>
+            ${headers.map(h => `<th style="${h === customTargetCol ? 'color: #34d399; font-weight: 700;' : ''}">${h}${h === customTargetCol ? ' (目標 y)' : ''}</th>`).join("")}
+        </tr>
+    `;
+
+    const displayRows = data.slice(0, 100);
+    tbody.innerHTML = displayRows.map((r, idx) => `
+        <tr>
+            <td class="mono-cell">${idx + 1}</td>
+            ${headers.map(h => {
+                const val = r[h];
+                const numVal = parseFloat(val);
+                const isNum = !isNaN(numVal) && isFinite(val);
+                const formatted = isNum ? numVal.toLocaleString(undefined, { maximumFractionDigits: 3 }) : val;
+                return `<td class="${isNum ? 'mono-cell' : ''}" style="${h === customTargetCol ? 'color: #34d399; font-weight: 600;' : ''}">${formatted}</td>`;
+            }).join("")}
+        </tr>
+    `).join("");
+
+    status.textContent = `共顯示 ${displayRows.length} 筆資料 (全資料庫計 ${data.length} 筆)`;
+}
+
+function filterCustomDataset(query) {
+    if (!customDatasetRaw) return;
+    let filtered = customDatasetRaw.rows.filter(r => {
+        if (!query) return true;
+        return Object.values(r).some(val => String(val).toLowerCase().includes(query));
+    });
+    renderDatasetTable(filtered);
+}
+

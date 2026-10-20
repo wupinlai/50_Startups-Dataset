@@ -1,24 +1,24 @@
 # 機器學習多元線性迴歸研究室 (MLR Studio)
-## HW 1: 50 Startups 利潤預測 & HW 2: Spotify Tracks 音樂流行度預測
+## HW 1: 50 Startups 利潤預測 & HW 2: Spotify Tracks 音樂流行度預測 & 任意自訂資料集引擎
 
 > 🌐 **Web 線上展示系統 (GitHub Pages)**: [https://wupinlai.github.io/50_Startups-Dataset/](https://wupinlai.github.io/50_Startups-Dataset/)  
-> 🔄 **作業雙模式切換**：系統上方提供專屬下拉選單（Dropdown Selector），可在 **HW 1: 50 Startups 利潤預測** 與 **HW 2: Spotify Tracks 音樂流行度預測** 之間即時無縫切換，包含特徵選取雙圖表、即時推論計算器、完整資料庫探索器與五大統計假設檢定。
+> 🔄 **作業專案與資料集切換**：系統上方提供專屬下拉選單（Dropdown Selector），可在 **HW 1: 50 Startups 利潤預測**、**HW 2: Spotify Tracks 音樂流行度預測** 與 **自訂資料集分析 (任意輸入 CSV / URL)** 之間即時無縫切換，包含特徵選取雙圖表、即時推論計算器、完整資料庫探索器與五大統計假設檢定。
 
 ---
 
 ## 專案架構概覽 (Overview)
 
-本專案全面落實數據科學界標準方法論 **CRISP-DM (Cross-Industry Standard Process for Data Mining)**，同時涵蓋兩個不同領域的多元線性迴歸（Multiple Linear Regression, MLR）實務問題：
+本專案全面落實數據科學界標準方法論 **CRISP-DM (Cross-Industry Standard Process for Data Mining)**，同時涵蓋多元線性迴歸（Multiple Linear Regression, MLR）的經典專案與任意 CSV 即時分析：
 
-| 項目 | HW 1: 50 Startups Dataset | HW 2: Spotify Tracks Dataset |
-|---|---|---|
-| **核心問題** | 新創企業營運與各項支出對淨利潤之影響 | 聲學音訊特徵對歌曲流行度評分之影響 |
-| **目標變數 ($y$)** | `Profit` (淨利潤，美元) | `popularity` (流行度評分，0~100) |
-| **主要特徵 ($X$)** | R&D Spend, Administration, Marketing Spend, State | Danceability, Energy, Loudness, Valence, Tempo, Speechiness, Acousticness, Instrumentalness, Liveness, Explicit |
-| **資料集規模** | 50 家新創企業（3 個州別） | 114,000 首曲目（114 種曲風） |
-| **最佳模型選取** | 雙特徵模型 (R&D + Marketing, $k=2$) | 九特徵模型 (最低 RMSE, $k=9$) |
-| **模型決定係數 ($R^2$)** | $R^2 \approx 0.9474$ (解釋力極高) | $R^2 \approx 0.0250$ (純聲學特徵具顯著性但受限於大眾流行隨機性) |
-| **核心商業洞察** | 研發支出為獲利關鍵驅動力 ($\beta_1 \approx 0.81, p < 0.001$) | 舞曲度最具正向帶動力 ($\beta \approx +8.63$)；單靠旋律無法保證爆紅，行銷與歌手人氣至關重要 |
+| 項目 | HW 1: 50 Startups Dataset | HW 2: Spotify Tracks Dataset | 🌐 自訂資料集分析 (Custom Dataset) |
+|---|---|---|---|
+| **核心問題** | 新創企業營運與各項支出對淨利潤之影響 | 聲學音訊特徵對歌曲流行度評分之影響 | 任意輸入 CSV 資料集進行特徵分析與目標預測 |
+| **目標變數 ($y$)** | `Profit` (淨利潤，美元) | `popularity` (流行度評分，0~100) | 自行選擇任意數值欄位作為依變數 |
+| **主要特徵 ($X$)** | R&D Spend, Administration, Marketing Spend, State | Danceability, Energy, Loudness, Valence, Tempo, 等 10 項 | 支援自由多選/取消勾選任意特徵欄位 |
+| **資料集規模** | 50 家新創企業（3 個州別） | 114,000 首曲目（114 種曲風） | 支援任意外部 URL (如 GitHub Raw) 或本地 CSV 上傳 |
+| **最佳模型選取** | 雙特徵模型 (R&D + Marketing, $k=2$) | 九特徵模型 (最低 RMSE, $k=9$) | 自動前向逐步特徵選取 ($k=1 \dots p$) |
+| **模型決定係數 ($R^2$)** | $R^2 \approx 0.9474$ (解釋力極高) | $R^2 \approx 0.0250$ (純聲學特徵分析) | 前端即時求解 OLS 矩陣並計算 $R^2$ 與 RMSE |
+| **即時預測模擬** | 動態調整研發與行銷投入 | 調整舞曲度、響度、能量等 | 動態生成輸入滑桿與即時推估值、信賴區間 |
 
 ---
 
